@@ -1,0 +1,226 @@
+import pandas as pd
+import numpy as np
+import csv
+
+csvpath = "Resources/purchase_data.csv"
+purchase_data = pd.read_csv(csvpath)
+
+## PLAYER COUNT ##
+#total number of players
+totalplayers = purchase_data['SN'].nunique()
+totalplayers
+
+
+
+## PURCHASING ANALYSIS (TOTAL) ##
+#number of unique items
+uniqueitems = purchase_data['Item ID'].nunique()
+uniqueitems
+
+#average price
+avgprice = purchase_data['Price'].mean()
+avgprice = '${:.2f}'.format(purchase_data['Price'].mean())
+avgprice
+
+#total revenue
+totalrevenue = '${:,.2f}'.format(purchase_data['Price'].sum())
+totalrevenue
+
+#number of purchases
+numpurchase = purchase_data['Purchase ID'].count()
+numpurchase
+
+#summary data frame for purchase analysis(Total)
+summpurchase = pd.DataFrame({
+    "Num of Unique Items": [uniqueitems],
+    'Average Price': [avgprice],
+    'Number of Purchases': [numpurchase],
+    'Total Revenue': [totalrevenue],
+})
+summpurchase
+
+
+
+## GENDER DEMOGRAPHICS ##
+sngender = purchase_data[['Gender','SN']]
+sngender.head()
+
+#total count
+sngenderuniq = sngender.groupby('Gender')
+snuniq = pd.DataFrame(sngenderuniq['SN'].nunique())
+snuniqre = snuniq.rename(columns={'SN':'Total Count'})
+snuniqre
+
+#percentage of players
+percentgend = pd.DataFrame((snuniq/totalplayers*100).round(2))
+percentgendre = percentgend.rename(columns={'SN':'Percentage of Players'})
+percentgendre
+
+#summary data frame for Gender Demographics
+gender_merge = pd.merge(snuniqre,percentgendre,on='Gender')
+gender_merge.sort_values(by='Total Count',ascending=False)
+
+
+
+## PURCHASING ANALYSIS (GENDER) ##
+#purchase count
+grbygender = purchase_data.groupby('Gender')
+gendcount = pd.DataFrame(grbygender['Price'].count())
+gendcountre = gendcount.rename(columns={'Price': 'Purchase Count'})
+gendcountre
+
+#average purchase price
+gendavg = pd.DataFrame(grbygender['Price'].mean())
+gendavgre = gendavg.rename(columns={'Price':'Average Purchase Price'})
+gendavgre = gendavgre.round(2).applymap("${0:.2f}".format)
+gendavgre
+
+#total purchase value
+gendsum = pd.DataFrame(grbygender['Price'].sum())
+gendsumre = gendsum.rename(columns={'Price':'Total Purchase Value'})
+gendsumre = gendsumre.applymap("${0:.2f}".format)
+gendsumre
+
+#average total purchase per person
+pricesummed = purchase_data.groupby(['SN', 'Gender'])['Price'].sum().reset_index()
+pricesummed
+sumgroup = pricesummed.groupby('Gender')
+meancount = pd.DataFrame(sumgroup['Price'].mean())
+meancount = meancount.rename(columns={'Price':'Avg Total Purchase Per Person'})
+meancount = meancount.round(2).applymap("${0:.2f}".format)
+meancount
+
+gender_merge = pd.merge(gendavgre,gendsumre,on='Gender')
+gender_merge
+
+#summary data frame for purchase analysis(gender)
+genderjoin = gender_merge.join(gendcountre)
+genderjoin
+
+
+
+## AGE DEMOGRAPHICS ##
+bins = [0,9,14,19,24,29,34,39,46]
+groupname = ['<10','10-14','15-19','20-24','25-29','30-34','35-39','40+']
+
+purchase_data['Age Group'] = pd.cut(purchase_data['Age'], bins,labels=groupname)
+purchase_data.head()
+
+#total count
+age_grouped = purchase_data.groupby('Age Group')
+total_count_age = pd.DataFrame(age_grouped["SN"].nunique()).rename(columns={'SN':'Total Count'})
+total_count_age
+
+#percentage of players
+percentage_by_age = pd.DataFrame((total_count_age/totalplayers * 100).round(2))
+percage = percentage_by_age.rename(columns={'Total Count':'Percentage of Players'})
+percage
+
+#summary data frame for age demographics
+agedem = pd.merge(total_count_age,percage,on='Age Group')
+agedem
+
+
+
+## PURCHASING ANALYSIS (AGE) ##
+purchase_data.head()
+
+#purchase count
+purchcount = purchase_data.groupby('Age Group')
+agedf = purchcount["Purchase ID"].count()
+agedf
+
+#average purchase price
+avgpurchprice = purchase_data.groupby('Age Group')
+avggroup = avgpurchprice['Price'].mean()
+avggroup = avggroup.round(2).apply(lambda x: '${:,.2f}'.format(x))
+avggroup
+
+#total purchase value
+totvalue = purchase_data.groupby('Age Group')
+sumpurch = totvalue['Price'].sum()
+sumpurch
+
+agecount = purchase_data.groupby('Age Group')
+ageunique = agecount['SN'].nunique()
+ageunique
+
+#avg total purchase per person
+avg1 = (sumpurch/ageunique)
+avg1 = avg1.round(2)
+avg1.head()
+
+avg1 = avg1.apply(lambda x: '${:,.2f}'.format(x))
+avg1.head()
+
+sumpurch = sumpurch.apply(lambda x: '${:,.2f}'.format(x))
+sumpurch.head()
+
+#purchase analysis (age)
+purchase_analysis_byage = pd.DataFrame({'Purchase Count':agedf,'Average Purchase Price':avggroup,'Total Purchase Value':sumpurch,'Average Total Purchase Per Person':avg1})
+purchase_analysis_byage.head()
+
+
+
+## TOP SPENDERS ##
+purchase_data.head()
+
+sn_grouped = purchase_data.groupby('SN')
+purchasecount = sn_grouped['Purchase ID'].count()
+purchasecount.head()
+
+#purchase count
+sn_grouped = purchase_data.groupby('SN')
+avgpurchaseprice = sn_grouped['Price'].mean().apply(lambda x: '${:,.2f}'.format(x))
+avgpurchaseprice.head()
+
+#total purchase value
+sn_grouped = purchase_data.groupby('SN')
+totalpurchvalue = sn_grouped['Price'].sum().apply(lambda x: '${:,.2f}'.format(x))
+totalpurchvalue.head()
+
+#summary data frame for top spenders
+top_spenders = pd.DataFrame({'Purchase Count':purchasecount,'Average Purchase Price':avgpurchaseprice,'Total Purchase Value':totalpurchvalue})
+top_spenders = top_spenders.sort_values('Total Purchase Value',ascending=False)
+top_spenders.head()
+
+
+
+## MOST POPULAR ITEMS ##
+purchase_data.head()
+
+mostpop = purchase_data[['Item ID','Item Name','Price']]
+mostpop.head()
+
+#purchase count
+popitems = mostpop.groupby(['Item ID','Item Name'])
+popitems_count = popitems['Price'].count()
+popitems_count.head()
+
+#total purchase value
+popitems = mostpop.groupby(['Item ID','Item Name'])
+sum_popitems = popitems['Price'].sum()
+sum_popitems.head()
+
+#price per item
+price_per_item = (sum_popitems)/(popitems_count)
+price_per_item2 = price_per_item.apply(lambda x: '${:,.2f}'.format(x))
+price_per_item2.head()
+
+sum_popitems2 = sum_popitems.apply(lambda x: '${:,.2f}'.format(x))
+sum_popitems2.head()
+
+#summary data frame for most popular item
+most_popular_df = pd.DataFrame({'Purchase Count':popitems_count,'Item Price':price_per_item2,'Total Purchase Value':sum_popitems2})
+most_popular_df = most_popular_df.sort_values(['Purchase Count'],ascending=False)
+most_popular_df.head()
+
+
+
+## MOST PROFITABLE ITEMS ##
+#sort most popular item' data frame in descending order
+most_profitable_df = pd.DataFrame({'Purchase Count':popitems_count,'Item Price':price_per_item2,'Total Purchase Value':sum_popitems})
+most_profitable_df = most_profitable_df.sort_values(['Total Purchase Value'],ascending=False)
+most_profitable_df['Total Purchase Value'] = most_profitable_df['Total Purchase Value'].map('${:.2f}'.format)
+most_profitable_df.head()
+
